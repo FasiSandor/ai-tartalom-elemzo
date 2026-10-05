@@ -44,7 +44,7 @@ export default function Home() {
     setBusy(true);
     try {
       if (file.name.toLowerCase().endsWith(".docx")) {
-        const mammoth = await import("mammoth/mammoth.browser");
+        const mammoth = await import("mammoth");
         const buffer = await file.arrayBuffer();
         const out = await mammoth.extractRawText({ arrayBuffer: buffer });
         setText(out.value);
