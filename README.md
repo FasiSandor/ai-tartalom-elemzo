@@ -11,3 +11,7 @@ Az alkalmazás nem állítja biztosan, hogy egy szöveget AI írt. A pontszám n
 - mintadokumentum formázásának kiolvasása
 - projektmentés és verziókövetés
 - saját stílusprofil
+
+
+## Deployment
+A production projekt GitHub main branchről automatikusan deployol Vercelen.
