@@ -37,23 +37,22 @@ function lengthLabel(value?: string) {
 }
 
 function extractText(data: any) {
-  if (typeof data?.output_text === "string" && data.output_text.trim()) return data.output_text.trim();
-  const parts: string[] = [];
-  for (const item of data?.output || []) {
-    for (const content of item?.content || []) {
-      if (content?.type === "output_text" && typeof content?.text === "string") parts.push(content.text);
-    }
-  }
-  return parts.join("\n").trim();
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return "";
+  return parts
+    .map((part: any) => typeof part?.text === "string" ? part.text : "")
+    .filter(Boolean)
+    .join("\n")
+    .trim();
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as WriteRequest;
-    const key = process.env.OPENAI_API_KEY;
+    const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!key) {
       return NextResponse.json(
-        { error: "Az AI-író még nincs API-kulccsal összekötve. A funkció elkészült, de a szerveroldali AI-kapcsolatot még konfigurálni kell." },
+        { error: "Az AI-író még nincs Gemini API-kulccsal összekötve. A funkció elkészült, de a szerveroldali Gemini-kapcsolatot még konfigurálni kell." },
         { status: 503 }
       );
     }
@@ -114,21 +113,27 @@ export async function POST(request: Request) {
       ].filter(Boolean).join("\n");
     }
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${key}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-6-luna",
-        input: prompt
-      })
-    });
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": key,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7
+          }
+        })
+      }
+    );
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("OpenAI write error", data);
+      console.error("Gemini write error", data);
       return NextResponse.json({ error: "Az AI-szolgáltatás most nem tudta elkészíteni a szöveget." }, { status: 502 });
     }
 
