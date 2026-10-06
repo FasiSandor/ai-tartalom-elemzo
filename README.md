@@ -26,3 +26,6 @@ GitHub main → Vercel automatikus deploy. A fejlesztés idején a Vercel build-
 
 ## Rollback
 A fejlesztés előtti állapot: `backup/v1-initial` branch.
+
+
+<!-- redeploy-trigger: 2026-10-06 -->
