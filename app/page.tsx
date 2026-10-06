@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import WriterWorkspace from "@/app/components/WriterWorkspace";
 import {
   analyzeText,
   buildSuggestions,
@@ -14,7 +15,7 @@ import {
   Sparkles, Trash2, Upload, Wand2
 } from "lucide-react";
 
-type Tab = "projektek" | "elemzes" | "javito" | "szerkezet" | "export" | "beallitasok";
+type Tab = "projektek" | "elemzes" | "aiiro" | "javito" | "szerkezet" | "export" | "beallitasok";
 
 type SavedProject = {
   id: string;
@@ -287,7 +288,7 @@ export default function Home() {
           <div className="brand-icon"><Sparkles size={20} /></div>
           <div>
             <strong>AI Tartalom Elemző</strong>
-            <span>Javítóasztal · V2</span>
+            <span>Javítóasztal · V3</span>
           </div>
         </div>
         <div className="top-actions">
@@ -300,6 +301,7 @@ export default function Home() {
         {[
           ["projektek", "Projektek", FolderOpen],
           ["elemzes", "Elemzés", Gauge],
+          ["aiiro", "AI Író", Sparkles],
           ["javito", "Javítóasztal", Wand2],
           ["szerkezet", "Szerkezet", Layers3],
           ["export", "Export", FileText],
@@ -425,6 +427,15 @@ export default function Home() {
         </>
       )}
 
+      {tab === "aiiro" && (
+        <WriterWorkspace
+          documentText={text}
+          styleSample={styleSample}
+          onUseText={(next) => { setText(next); setResult(null); setSelected(null); }}
+          onToast={setToast}
+        />
+      )}
+
       {tab === "javito" && (
         <section className="panel editor-panel">
           <div className="panel-head"><div><span className="step">J</span><div><b>Javítóasztal</b><small>Javítási irányok, nem automatikus „detektor-kijátszás”.</small></div></div></div>
@@ -488,7 +499,7 @@ export default function Home() {
         </section>
       )}
 
-      <footer>AI Tartalom Elemző · V2 fejlesztési ág · A pontszám nem használható önmagában szerzőség bizonyítására.</footer>
+      <footer>AI Tartalom Elemző · V3 fejlesztési ág · A pontszám nem használható önmagában szerzőség bizonyítására.</footer>
     </main>
   );
 }
