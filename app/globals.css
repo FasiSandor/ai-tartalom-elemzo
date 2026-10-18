@@ -32,3 +32,26 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
  .tabs{scrollbar-width:none}
  .tabs::-webkit-scrollbar{display:none}
 }
+
+/* PedAi_Tut-inspired cinematic design system, adapted to existing analysis UI */
+:root{--pedai-midnight:#080d20;--pedai-surface:#101a35;--pedai-cyan:#22d3ee;--pedai-violet:#a855f7;--pedai-ease:cubic-bezier(.16,1,.3,1)}
+body{background:var(--pedai-midnight)}
+.app-shell{background:radial-gradient(ellipse 65% 42% at 7% 8%,rgba(0,201,235,.13),transparent 72%),radial-gradient(ellipse 70% 60% at 95% 35%,rgba(123,65,220,.13),transparent 74%),linear-gradient(145deg,#080d20,#0b1127 65%,#090d1c);color:#edf5ff}
+.topbar{background:rgba(8,13,32,.82);border-bottom-color:rgba(116,167,225,.12);-webkit-backdrop-filter:blur(20px) saturate(140%);backdrop-filter:blur(20px) saturate(140%)}
+.brand-icon{background:linear-gradient(145deg,#096ca3,#22d3ee 70%,#a855f7);box-shadow:0 0 25px rgba(34,211,238,.23)}
+.panel,.project-card,.form-card{background:linear-gradient(145deg,rgba(24,43,78,.75),rgba(12,18,41,.92));border:1px solid rgba(145,187,247,.14);box-shadow:inset 0 1px rgba(255,255,255,.045),0 22px 60px -28px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.panel{border-radius:20px}
+.panel:hover,.project-card:hover{border-color:rgba(34,211,238,.25);transition:border-color .3s var(--pedai-ease)}
+.primary{background:linear-gradient(110deg,#155bc9,#0897cf 70%,#15b8db);border-color:rgba(103,224,255,.45);box-shadow:0 0 22px -7px rgba(34,211,238,.38);transition:transform .22s var(--pedai-ease),box-shadow .22s var(--pedai-ease)}
+.primary:hover:not(:disabled){box-shadow:0 0 28px -5px rgba(34,211,238,.55);transform:translateY(-1px)}
+.secondary,.top-btn{background:rgba(21,34,62,.8);border-color:rgba(124,165,224,.2)}
+.secondary:hover,.top-btn:hover{border-color:rgba(34,211,238,.45)}
+.step,.project-icon{background:linear-gradient(145deg,rgba(34,211,238,.14),rgba(168,85,247,.1));border-color:rgba(34,211,238,.35);color:#67e8f9}
+.eyebrow{color:#67e8f9;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.hero h1 span{background:linear-gradient(95deg,#69caff,#22d3ee 52%,#b08aff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tabs button.active{background:linear-gradient(130deg,rgba(34,211,238,.14),rgba(168,85,247,.08));border-color:rgba(34,211,238,.3);box-shadow:inset 0 1px rgba(255,255,255,.06),0 0 18px -10px rgba(34,211,238,.4)}
+.score-ring{background:radial-gradient(circle at 40% 25%,#1d3153,#0a1125 75%);box-shadow:0 0 30px -13px rgba(34,211,238,.35)}
+.bar i{background:linear-gradient(90deg,#2563eb,#22d3ee)}
+.input-panel textarea{background:rgba(6,13,30,.5)}
+@media(max-width:620px){.app-shell{background:radial-gradient(ellipse 120% 25% at 10% 0%,rgba(0,201,235,.1),transparent 72%),linear-gradient(150deg,#080d20,#10132b)}.panel,.project-card{border-radius:16px}.hero{padding-top:22px}.hero h1{line-height:1.12}.settings-wrap>.panel{box-shadow:inset 0 1px rgba(255,255,255,.045),0 12px 32px -20px #000}}
+@media(prefers-reduced-motion:reduce){.primary:hover:not(:disabled){transform:none}}
