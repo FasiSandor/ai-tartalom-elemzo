@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description: "Beadandók mintázatelemzése, interaktív hőtérkép és tanári jelentés",
   applicationName: "AI Beadandóelemző",
   manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
   appleWebApp: { capable: true, title: "AI Elemző", statusBarStyle: "black-translucent" }
 };
 
