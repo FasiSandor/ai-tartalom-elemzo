@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import VisualReport from "@/components/VisualReport";
+import { reviewContent, documentTypes, type DocumentKind } from "@/lib/content-review";
 import {
   analyzeText,
   buildSuggestions,
@@ -61,6 +62,7 @@ export default function Home() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [tab, setTab] = useState<Tab>("elemzes");
   const [moreOpen, setMoreOpen] = useState(false);
+  const [documentKind, setDocumentKind] = useState<DocumentKind | "auto">("auto");
   const [selected, setSelected] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [projects, setProjects] = useState<SavedProject[]>([]);
@@ -91,6 +93,7 @@ export default function Home() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
+  const contentReview = useMemo(() => result ? reviewContent(text, documentKind === "auto" ? undefined : documentKind) : null, [result, text, documentKind]);
   const selectedParagraph = selected !== null && result ? result.paragraphs[selected] : null;
   const suggestions = useMemo(
     () => (selectedParagraph ? buildSuggestions(selectedParagraph.text) : []),
@@ -518,6 +521,29 @@ export default function Home() {
             </section>
           )}
         </>
+      )}
+
+      {tab === "jelentes" && contentReview && (
+        <section className="settings-wrap content-review">
+          <div className="panel">
+            <div className="eyebrow">TARTALMI ÁTTEKINTÉS · ELŐZETES</div>
+            <h2>Dokumentumtípus és tartalmi ellenőrzőlista</h2>
+            <p>A rendszer felismerési javaslatot ad. Ez nem helyettesíti a valódi AI-alapú szakmai értékelést.</p>
+            <label htmlFor="document-kind">Dokumentumtípus</label>
+            <select id="document-kind" value={documentKind} onChange={e=>setDocumentKind(e.target.value as DocumentKind | "auto")}>
+              <option value="auto">Automatikus felismerés</option>
+              {documentTypes.map(d=><option key={d.kind} value={d.kind}>{d.title}</option>)}
+            </select>
+            <p><strong>Azonosított típus:</strong> {contentReview.title} · felismerés: {contentReview.certainty}</p>
+            <div className="content-checks">
+              {contentReview.findings.map(item=><article key={item.label} className="content-check">
+                <div><span className={item.status==="found"?"found":"review"}>{item.status==="found"?"Szöveges jel":"Ellenőrizendő"}</span><strong>{item.label}</strong></div>
+                <p>{item.evidence}</p><small>{item.advice}</small>
+              </article>)}
+            </div>
+            {contentReview.limitations.map(line=><p className="content-caveat" key={line}>{line}</p>)}
+          </div>
+        </section>
       )}
 
       {tab === "jelentes" && (
