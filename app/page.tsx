@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import VisualReport from "@/components/VisualReport";
+import { reviewContent, documentTypes, type DocumentKind } from "@/lib/content-review";
 import {
   analyzeText,
   buildSuggestions,
@@ -14,7 +16,7 @@ import {
   Sparkles, Trash2, Upload, Wand2
 } from "lucide-react";
 
-type Tab = "projektek" | "elemzes" | "javito" | "szerkezet" | "export" | "beallitasok";
+type Tab = "projektek" | "elemzes" | "javito" | "szerkezet" | "export" | "beallitasok" | "jelentes";
 
 type SavedProject = {
   id: string;
@@ -59,6 +61,8 @@ export default function Home() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [tab, setTab] = useState<Tab>("elemzes");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [documentKind, setDocumentKind] = useState<DocumentKind | "auto">("auto");
   const [selected, setSelected] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [projects, setProjects] = useState<SavedProject[]>([]);
@@ -68,6 +72,8 @@ export default function Home() {
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(defaultExport);
   const [toast, setToast] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [uploadProgress, setUploadProgress] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -87,6 +93,7 @@ export default function Home() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
+  const contentReview = useMemo(() => result ? reviewContent(text, documentKind === "auto" ? undefined : documentKind) : null, [result, text, documentKind]);
   const selectedParagraph = selected !== null && result ? result.paragraphs[selected] : null;
   const suggestions = useMemo(
     () => (selectedParagraph ? buildSuggestions(selectedParagraph.text) : []),
@@ -99,33 +106,70 @@ export default function Home() {
   }
 
   async function runAnalysis() {
-    if (!text.trim()) return;
+    if (!text.trim() || busy) return;
+    setFileError("");
+    if (text.length > 1_500_000) {
+      setFileError("A dokumentum túl hosszú az egyidejű elemzéshez. Oszd több részre (legfeljebb 1,5 millió karakter).");
+      return;
+    }
     setBusy(true);
-    await new Promise((r) => setTimeout(r, 260));
-    const r = analyzeText(text, styleProfile);
-    setResult(r);
-    setSelected(r.paragraphs.length ? 0 : null);
-    setBusy(false);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const analysis = analyzeText(text, styleProfile);
+      setResult(analysis);
+      setSelected(analysis.paragraphs.length ? 0 : null);
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Az elemzés nem sikerült.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function readFile(file?: File) {
     if (!file) return;
     setBusy(true);
+    setFileError("");
+    setUploadProgress("Fájl előkészítése…");
     try {
-      if (file.name.toLowerCase().endsWith(".docx")) {
+      if (file.size > 45 * 1024 * 1024) throw new Error("A fájl nagyobb 45 MB-nál. Kérlek, kisebb fájlt válassz.");
+      if (file.name.toLowerCase().endsWith(".pdf")) {
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+        const pages: string[] = [];
+        if (pdf.numPages > 500) throw new Error("A PDF több mint 500 oldalas; oszd több részre az elemzéshez.");
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          if (pageNum === 1 || pageNum % 5 === 0 || pageNum === pdf.numPages) setUploadProgress(`PDF feldolgozása: ${pageNum}/${pdf.numPages} oldal`);
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const extracted = content.items.map((item) => ("str" in item ? String(item.str) : "")).join(" ");
+          if (extracted.trim()) pages.push(extracted);
+          if (pageNum % 12 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
+        }
+        if (!pages.length || pages.join("").trim().length < 50) throw new Error("A PDF valószínűleg képalapú. Szövegfelismerés (OCR) szükséges.");
+        const extractedText = pages.join("\n\n");
+        if (extractedText.length > 1_500_000) throw new Error("A PDF szövege túl hosszú. Oszd kisebb dokumentumokra.");
+        setText(extractedText);
+      } else if (file.name.toLowerCase().endsWith(".docx")) {
         const mammoth = await import("mammoth");
         const buffer = await file.arrayBuffer();
         const out = await mammoth.extractRawText({ arrayBuffer: buffer });
         setText(out.value);
-      } else {
+      } else if (file.name.toLowerCase().endsWith(".txt")) {
         setText(await file.text());
+      } else {
+        throw new Error("Csak PDF, DOCX és TXT fájl tölthető fel.");
       }
-      setProjectName(file.name.replace(/\.(docx|txt)$/i, "") || nowName());
+      setProjectName(file.name.replace(/\.(docx|txt|pdf)$/i, "") || nowName());
       setCurrentProjectId(null);
       setResult(null);
       setSelected(null);
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Nem sikerült beolvasni a fájlt.");
     } finally {
       setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+      setUploadProgress("");
     }
   }
 
@@ -272,6 +316,49 @@ export default function Home() {
     }
   }
 
+  async function exportReportDocx() {
+    if (!result) return;
+    setBusy(true);
+    try {
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+      const paragraphs = [
+        new Paragraph({ text: projectName, heading: HeadingLevel.TITLE }),
+        new Paragraph({ text: "Részletes tanári mintázatelemzési jelentés", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: `Szavak: ${result.words} | Mondatok: ${result.sentences} | Bekezdések: ${result.paragraphs.length}` }),
+        new Paragraph({ text: `Mintázati jelzés: ${result.score}/100 – ${result.label}` }),
+        new Paragraph({ text: "Fontos: a pontszám nem az AI-val írt szöveg aránya, nem bizonyít AI-szerzőséget vagy plágiumot." }),
+        new Paragraph({ text: "Nyelvi mintázatok", heading: HeadingLevel.HEADING_2 }),
+        ...result.signals.map(signal => new Paragraph({ children: [
+          new TextRun({ text: `${signal.label} (${signal.value}/100): `, bold: true }),
+          new TextRun(signal.detail)
+        ] })),
+        new Paragraph({ text: "Bekezdésenkénti értékelés", heading: HeadingLevel.HEADING_2 }),
+        ...result.paragraphs.flatMap((p, i) => [
+          new Paragraph({ text: `${i + 1}. bekezdés – ${p.score}/100`, heading: HeadingLevel.HEADING_3 }),
+          new Paragraph({ text: p.text }),
+          ...p.reasons.map(reason => new Paragraph({ text: `• Indoklás: ${reason}` })),
+          new Paragraph({ text: "Tanári ellenőrzés: konkrét példák, források és a gondolatmenet saját szavas magyarázata." })
+        ]),
+        new Paragraph({ text: "Értelmezési korlátok", heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: "A vizsgált stílusjegyek emberi szövegekben is előfordulnak. Az elemzés nem validált AI-detektor; önmagában nem használható szankció alapjául." })
+      ];
+      const doc = new Document({ sections: [{ children: paragraphs }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (projectName || "jelentes").replace(/[^\p{L}\p{N}_-]+/gu, "_") + "_tanari_jelentes.docx";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setToast("Tanári jelentés Word-fájl elkészült");
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Nem sikerült elkészíteni a jelentést.");
+      setToast("Nem sikerült exportálni a jelentést");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copySelected() {
     if (!selectedParagraph) return;
     await navigator.clipboard.writeText(selectedParagraph.text);
@@ -287,7 +374,7 @@ export default function Home() {
           <div className="brand-icon"><Sparkles size={20} /></div>
           <div>
             <strong>AI Tartalom Elemző</strong>
-            <span>Javítóasztal · V2</span>
+            <span>Dokumentumvizsgálat · tanári műhely</span>
           </div>
         </div>
         <div className="top-actions">
@@ -296,20 +383,28 @@ export default function Home() {
         </div>
       </header>
 
-      <nav className="tabs">
-        {[
-          ["projektek", "Projektek", FolderOpen],
-          ["elemzes", "Elemzés", Gauge],
-          ["javito", "Javítóasztal", Wand2],
-          ["szerkezet", "Szerkezet", Layers3],
-          ["export", "Export", FileText],
-          ["beallitasok", "Beállítások", Settings]
-        ].map(([key, label, Icon]) => (
-          <button key={key as string} className={tab === key ? "active" : ""} onClick={() => setTab(key as Tab)}>
-            <Icon size={17} /> {label as string}
+      <nav className="tabs" aria-label="Fő navigáció">
+        {([
+          ["elemzes", "1. Feltöltés és elemzés", Gauge],
+          ["jelentes", "2. Jelentés", Activity],
+          ["javito", "3. Javítóasztal", Wand2],
+          ["projektek", "Dokumentumtár", FolderOpen]
+        ] as const).map(([key,label,Icon])=>(
+          <button key={key} className={tab===key?"active":""} onClick={()=>{setTab(key);setMoreOpen(false);}}>
+            <Icon size={17}/><span>{label}</span>
           </button>
         ))}
+        <button className={moreOpen||tab==="szerkezet"||tab==="export"||tab==="beallitasok"?"active":""}
+          aria-expanded={moreOpen} aria-controls="more-tools" onClick={()=>setMoreOpen(v=>!v)}>
+          <Settings size={17}/><span>További eszközök</span>
+        </button>
       </nav>
+      {moreOpen && <div id="more-tools" className="more-tools" role="group" aria-label="További eszközök">
+        {([["szerkezet","Szerkezet",Layers3],["export","Word-export",FileText],["beallitasok","Beállítások",Settings]] as const).map(([key,label,Icon])=>
+          <button key={key} className={tab===key?"active":""} onClick={()=>{setTab(key);setMoreOpen(false);}}>
+            <Icon size={16}/>{label}
+          </button>)}
+      </div>}
 
       {tab !== "projektek" && (
         <section className="document-bar">
@@ -349,8 +444,8 @@ export default function Home() {
           <section className="hero">
             <div>
               <div className="eyebrow">AI-STÍLUSVIZSGÁLAT</div>
-              <h1>Ne csak egy százalékot kapj.<br /><span>Lásd, miért gyanús.</span></h1>
-              <p>Bekezdésenkénti kockázattérkép, indoklás, bizonytalansági szint és opcionális saját stílusprofil.</p>
+              <h1>Tölts fel. Elemezz.<br /><span>Értsd meg a jelzéseket.</span></h1>
+              <p>1. Dokumentum feltöltése → 2. Mintázatelemzés → 3. Interaktív térkép és részletes jelentés. A jelzések nem bizonyítanak AI-használatot.</p>
             </div>
             <div className="hero-badge"><ShieldCheck size={34} /><div><b>Nem ítél, hanem jelez</b><small>A pontszám nem szerzőségi bizonyíték.</small></div></div>
           </section>
@@ -358,19 +453,22 @@ export default function Home() {
           <section className="workspace">
             <div className="panel input-panel">
               <div className="panel-head">
-                <div><span className="step">1</span><div><b>Szöveg</b><small>Másold be vagy tölts fel DOCX/TXT fájlt.</small></div></div>
+                <div><span className="step">1</span><div><b>Szöveg</b><small>Másold be a szöveget, vagy válassz PDF, DOCX vagy TXT fájlt.</small></div></div>
                 <button className="ghost" onClick={loadSample}>Mintaszöveg</button>
               </div>
               <textarea value={text} onChange={(e) => {setText(e.target.value); setResult(null);}} placeholder="Ide másold a vizsgálandó szöveget…" />
               <div className="input-actions">
                 <button className="secondary" onClick={() => inputRef.current?.click()}><Upload size={17} /> Fájl</button>
-                <input ref={inputRef} type="file" accept=".txt,.docx" hidden onChange={(e) => readFile(e.target.files?.[0])} />
+                <input ref={inputRef} type="file" accept=".txt,.docx,.pdf" hidden onChange={(e) => readFile(e.target.files?.[0])} />
                 <span>{styleProfile ? "Saját stílusprofil: aktív" : "Alap elemzési profil"}</span>
                 <button className="primary" disabled={!text.trim() || busy} onClick={runAnalysis}>
                   {busy ? <RefreshCw className="spin" size={17} /> : <Activity size={17} />}
                   {busy ? "Elemzés…" : "Elemzés indítása"}
                 </button>
               </div>
+              {uploadProgress && <p role="status" style={{color:"#60a5fa",padding:"0 16px 12px",fontSize:13}}>{uploadProgress}</p>}
+              {fileError && <p role="alert" style={{color:"#fca5a5",padding:"0 16px 12px",fontSize:13}}>{fileError}</p>}
+              {result && <div style={{padding:"0 14px 14px"}}><button className="primary wide" onClick={()=>setTab("jelentes")}><FileText size={17}/> Részletes jelentés és diagramok</button></div>}
             </div>
 
             <div className="panel result-panel">
@@ -385,7 +483,7 @@ export default function Home() {
                     <strong>{result.score}</strong><span>/100</span>
                   </div>
                   <div className="score-copy">
-                    <h3>{result.label}</h3>
+                    <h3>{result.label}</h3><p>Stílusmintázati pontszám, nem az AI-val írt rész becsült aránya.</p>
                     <p>{result.words} szó · {result.sentences} mondat · bizonyosság: <b>{result.confidence}</b></p>
                     {result.profileMatch !== undefined && <div className="profile-match">Saját stílushoz hasonlóság: <strong>{result.profileMatch}%</strong></div>}
                   </div>
@@ -423,6 +521,59 @@ export default function Home() {
             </section>
           )}
         </>
+      )}
+
+      {tab === "jelentes" && contentReview && (
+        <section className="settings-wrap content-review">
+          <div className="panel">
+            <div className="eyebrow">TARTALMI ÁTTEKINTÉS · ELŐZETES</div>
+            <h2>Dokumentumtípus és tartalmi ellenőrzőlista</h2>
+            <p>A rendszer felismerési javaslatot ad. Ez nem helyettesíti a valódi AI-alapú szakmai értékelést.</p>
+            <label htmlFor="document-kind">Dokumentumtípus</label>
+            <select id="document-kind" value={documentKind} onChange={e=>setDocumentKind(e.target.value as DocumentKind | "auto")}>
+              <option value="auto">Automatikus felismerés</option>
+              {documentTypes.map(d=><option key={d.kind} value={d.kind}>{d.title}</option>)}
+            </select>
+            <p><strong>Azonosított típus:</strong> {contentReview.title} · felismerés: {contentReview.certainty}</p>
+            <div className="content-checks">
+              {contentReview.findings.map(item=><article key={item.label} className="content-check">
+                <div><span className={item.status==="found"?"found":"review"}>{item.status==="found"?"Szöveges jel":"Ellenőrizendő"}</span><strong>{item.label}</strong></div>
+                <p>{item.evidence}</p><small>{item.advice}</small>
+              </article>)}
+            </div>
+            {contentReview.limitations.map(line=><p className="content-caveat" key={line}>{line}</p>)}
+          </div>
+        </section>
+      )}
+
+      {tab === "jelentes" && (
+        <section className="settings-wrap">
+          {!result ? <div className="panel empty"><FileText size={38}/><b>Előbb elemezz egy dokumentumot</b><span>Feltöltés és elemzés után megjelennek a vizuális és szöveges eredmények.</span><button className="primary" onClick={()=>setTab("elemzes")}>Elemzés megnyitása</button></div> : <>
+            <div className="panel" style={{padding:20}}>
+              <span className="eyebrow">RÉSZLETES TANÁRI JELENTÉS</span>
+              <h1 style={{margin:"6px 0 12px"}}>{projectName}</h1>
+              <p style={{color:"#94a3b8"}}>{result.words} szó · {result.paragraphs.length} vizsgált bekezdés · {result.sentences} mondat</p>
+              <h2>Mintázati jelzés: {result.score}/100</h2>
+              <p>{result.label}. Az érték nem a mesterséges intelligencia által írt szöveg százalékos aránya.</p>
+              <p style={{color:"#94a3b8"}}>Az elemzés szöveghossz-alapú bizonyossági besorolása: {result.confidence}. Ez nem validált detektálási pontosság.</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:10}}><button className="primary" onClick={()=>window.print()}><Download size={16}/> PDF-be mentés / nyomtatás</button><button className="secondary" disabled={busy} onClick={exportReportDocx}><FileText size={16}/> Teljes tanári jelentés Wordben</button></div>
+            </div>
+            <VisualReport sections={[{id:"document",title:"Teljes dokumentum",paragraphScores:result.paragraphs.map(p=>p.score)}]} onSelect={(_,i)=>{setSelected(i);setTab("elemzes");}} />
+            <div className="panel" style={{padding:20}}>
+              <h2>Azonosított nyelvi mintázatok</h2>
+              {result.signals.map(s=><div key={s.label} className="reason"><strong>{s.label}: {s.value}/100</strong> — {s.detail}</div>)}
+              <h2>Megjelölt bekezdések és indoklásuk</h2>
+              {result.paragraphs.map((p,i)=><article key={i} style={{borderTop:"1px solid #2a3445",padding:"14px 0"}}>
+                <b>{i+1}. bekezdés · {p.score}/100</b>
+                <p style={{whiteSpace:"pre-wrap",lineHeight:1.6}}>{p.text}</p>
+                <ul>{p.reasons.map((r,j)=><li key={j}>{r}</li>)}</ul>
+                <p style={{color:"#94a3b8",fontSize:12}}>Tanári ellenőrzés: kérj konkrét példát, a hivatkozott forrás bemutatását és a gondolatmenet saját szavakkal történő magyarázatát.</p>
+              </article>)}
+              <h2>Értelmezési korlátok</h2>
+              <p>Az egyenletes mondathossz, a sablonos kifejezések és a stílusváltások ember által írt szövegben is előfordulnak. A jelentés nem bizonyít AI-szerzőséget, plágiumot vagy szabályszegést. Önálló szankció alapjául nem használható.</p>
+            </div>
+          </>}
+        </section>
       )}
 
       {tab === "javito" && (
