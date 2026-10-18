@@ -331,7 +331,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = (projectName || "jelentes").replace(/[^\\p{L}\\p{N}_-]+/gu, "_") + "_tanari_jelentes.docx";
+      a.download = (projectName || "jelentes").replace(/[^\p{L}\p{N}_-]+/gu, "_") + "_tanari_jelentes.docx";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setToast("Tanári jelentés Word-fájl elkészült");
