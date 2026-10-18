@@ -70,6 +70,7 @@ export default function Home() {
   const [exportSettings, setExportSettings] = useState<ExportSettings>(defaultExport);
   const [toast, setToast] = useState("");
   const [fileError, setFileError] = useState("");
+  const [uploadProgress, setUploadProgress] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function Home() {
     if (!file) return;
     setBusy(true);
     setFileError("");
+    setUploadProgress("Fájl előkészítése…");
     try {
       if (file.size > 45 * 1024 * 1024) throw new Error("A fájl nagyobb 45 MB-nál. Kérlek, kisebb fájlt válassz.");
       if (file.name.toLowerCase().endsWith(".pdf")) {
@@ -123,6 +125,7 @@ export default function Home() {
         const pages: string[] = [];
         if (pdf.numPages > 500) throw new Error("A PDF több mint 500 oldalas; oszd több részre az elemzéshez.");
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          if (pageNum === 1 || pageNum % 5 === 0 || pageNum === pdf.numPages) setUploadProgress(`PDF feldolgozása: ${pageNum}/${pdf.numPages} oldal`);
           const page = await pdf.getPage(pageNum);
           const content = await page.getTextContent();
           const extracted = content.items.map((item) => ("str" in item ? String(item.str) : "")).join(" ");
@@ -150,6 +153,7 @@ export default function Home() {
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
+      setUploadProgress("");
     }
   }
 
@@ -396,6 +400,7 @@ export default function Home() {
                   {busy ? "Elemzés…" : "Elemzés indítása"}
                 </button>
               </div>
+              {uploadProgress && <p role="status" style={{color:"#60a5fa",padding:"0 16px 12px",fontSize:13}}>{uploadProgress}</p>}
               {fileError && <p role="alert" style={{color:"#fca5a5",padding:"0 16px 12px",fontSize:13}}>{fileError}</p>}
               {result && <div style={{padding:"0 14px 14px"}}><button className="primary wide" onClick={()=>setTab("jelentes")}><FileText size={17}/> Részletes jelentés és diagramok</button></div>}
             </div>
