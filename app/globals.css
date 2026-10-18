@@ -55,3 +55,30 @@ body{background:var(--pedai-midnight)}
 .input-panel textarea{background:rgba(6,13,30,.5)}
 @media(max-width:620px){.app-shell{background:radial-gradient(ellipse 120% 25% at 10% 0%,rgba(0,201,235,.1),transparent 72%),linear-gradient(150deg,#080d20,#10132b)}.panel,.project-card{border-radius:16px}.hero{padding-top:22px}.hero h1{line-height:1.12}.settings-wrap>.panel{box-shadow:inset 0 1px rgba(255,255,255,.045),0 12px 32px -20px #000}}
 @media(prefers-reduced-motion:reduce){.primary:hover:not(:disabled){transform:none}}
+
+/* Three-step navigation with a compact expandable tool drawer */
+.tabs{align-items:center;scrollbar-width:none;position:relative;z-index:5}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex-shrink:0}
+.more-tools{display:flex;flex-wrap:wrap;gap:8px;padding:12px max(20px,calc((100vw - 1240px)/2));background:rgba(10,18,39,.95);border-bottom:1px solid rgba(34,211,238,.15)}
+.more-tools button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:9px 14px;color:#d9eaff;background:#14213b;border:1px solid #2a405b;border-radius:10px;cursor:pointer}
+.more-tools button.active{border-color:#22d3ee;background:rgba(34,211,238,.15)}
+@media(max-width:620px){
+ .topbar{height:auto;min-height:64px;padding:10px 12px}
+ .top-actions .status{display:none}
+ .tabs{padding:10px 12px;gap:6px;overflow-x:auto;scroll-snap-type:x proximity}
+ .tabs button{padding:10px 12px;min-height:44px;font-size:12px;scroll-snap-align:start}
+ .more-tools{padding:10px 12px}
+ .more-tools button{flex:1 1 130px;justify-content:center}
+ .document-bar{flex-wrap:wrap;padding:12px}
+ .document-bar input{flex-basis:100%;width:100%}
+ .hero{flex-direction:column;align-items:stretch;gap:14px;padding:25px 14px 20px}
+ .hero h1{font-size:clamp(26px,7.2vw,40px)}
+ .hero-badge{max-width:100%}
+ .workspace,.projects-wrap,.map-panel{min-width:0}
+ .input-actions{flex-wrap:wrap}
+ .input-actions>button{min-height:44px}
+ .paragraph-grid{min-width:0}
+ .paragraph-list,.why{min-width:0}
+ .paragraph p{overflow-wrap:anywhere}
+}
