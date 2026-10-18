@@ -129,9 +129,8 @@ export default function Home() {
           if (pageNum % 12 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
         }
         if (!pages.length || pages.join("").trim().length < 50) throw new Error("A PDF valószínűleg képalapú. Szövegfelismerés (OCR) szükséges.");
-        setText(pages.join("\\n\\n").replace(/\\n/g, "\n"));
-      } else
-      if (file.name.toLowerCase().endsWith(".docx")) {
+        setText(pages.join("\n\n"));
+      } else if (file.name.toLowerCase().endsWith(".docx")) {
         const mammoth = await import("mammoth");
         const buffer = await file.arrayBuffer();
         const out = await mammoth.extractRawText({ arrayBuffer: buffer });
