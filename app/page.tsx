@@ -69,6 +69,7 @@ export default function Home() {
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(defaultExport);
   const [toast, setToast] = useState("");
+  const [fileError, setFileError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -112,7 +113,11 @@ export default function Home() {
   async function readFile(file?: File) {
     if (!file) return;
     setBusy(true);
+    setFileError("");
     try {
+      if (file.name.toLowerCase().endsWith(".pdf")) {
+        throw new Error("A PDF-beolvasás még fejlesztés alatt áll. Most DOCX vagy TXT fájlt tölts fel.");
+      }
       if (file.name.toLowerCase().endsWith(".docx")) {
         const mammoth = await import("mammoth");
         const buffer = await file.arrayBuffer();
@@ -125,8 +130,11 @@ export default function Home() {
       setCurrentProjectId(null);
       setResult(null);
       setSelected(null);
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Nem sikerült beolvasni a fájlt.");
     } finally {
       setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
@@ -288,7 +296,7 @@ export default function Home() {
           <div className="brand-icon"><Sparkles size={20} /></div>
           <div>
             <strong>AI Tartalom Elemző</strong>
-            <span>Javítóasztal · V2</span>
+            <span>Dokumentumvizsgálat · tanári műhely</span>
           </div>
         </div>
         <div className="top-actions">
@@ -351,8 +359,8 @@ export default function Home() {
           <section className="hero">
             <div>
               <div className="eyebrow">AI-STÍLUSVIZSGÁLAT</div>
-              <h1>Ne csak egy százalékot kapj.<br /><span>Lásd, miért gyanús.</span></h1>
-              <p>Bekezdésenkénti kockázattérkép, indoklás, bizonytalansági szint és opcionális saját stílusprofil.</p>
+              <h1>Tölts fel. Elemezz.<br /><span>Értsd meg a jelzéseket.</span></h1>
+              <p>1. Dokumentum feltöltése → 2. Mintázatelemzés → 3. Interaktív térkép és részletes jelentés. A jelzések nem bizonyítanak AI-használatot.</p>
             </div>
             <div className="hero-badge"><ShieldCheck size={34} /><div><b>Nem ítél, hanem jelez</b><small>A pontszám nem szerzőségi bizonyíték.</small></div></div>
           </section>
@@ -360,7 +368,7 @@ export default function Home() {
           <section className="workspace">
             <div className="panel input-panel">
               <div className="panel-head">
-                <div><span className="step">1</span><div><b>Szöveg</b><small>Másold be vagy tölts fel DOCX/TXT fájlt.</small></div></div>
+                <div><span className="step">1</span><div><b>Szöveg</b><small>Másold be a szöveget, vagy válassz DOCX/TXT fájlt.</small></div></div>
                 <button className="ghost" onClick={loadSample}>Mintaszöveg</button>
               </div>
               <textarea value={text} onChange={(e) => {setText(e.target.value); setResult(null);}} placeholder="Ide másold a vizsgálandó szöveget…" />
@@ -373,6 +381,8 @@ export default function Home() {
                   {busy ? "Elemzés…" : "Elemzés indítása"}
                 </button>
               </div>
+              {fileError && <p role="alert" style={{color:"#fca5a5",padding:"0 16px 12px",fontSize:13}}>{fileError}</p>}
+              {result && <div style={{padding:"0 14px 14px"}}><button className="primary wide" onClick={()=>setTab("jelentes")}><FileText size={17}/> Részletes jelentés és diagramok</button></div>}
             </div>
 
             <div className="panel result-panel">
@@ -387,7 +397,7 @@ export default function Home() {
                     <strong>{result.score}</strong><span>/100</span>
                   </div>
                   <div className="score-copy">
-                    <h3>{result.label}</h3>
+                    <h3>{result.label}</h3><p>Stílusmintázati pontszám, nem az AI-val írt rész becsült aránya.</p>
                     <p>{result.words} szó · {result.sentences} mondat · bizonyosság: <b>{result.confidence}</b></p>
                     {result.profileMatch !== undefined && <div className="profile-match">Saját stílushoz hasonlóság: <strong>{result.profileMatch}%</strong></div>}
                   </div>
