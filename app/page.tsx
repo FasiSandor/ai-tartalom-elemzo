@@ -325,7 +325,7 @@ export default function Home() {
       </header>
 
       <nav className="tabs">
-        {[
+        {([
           ["projektek", "Projektek", FolderOpen],
           ["elemzes", "Elemzés", Gauge],
           ["javito", "Javítóasztal", Wand2],
@@ -333,9 +333,9 @@ export default function Home() {
           ["szerkezet", "Szerkezet", Layers3],
           ["export", "Export", FileText],
           ["beallitasok", "Beállítások", Settings]
-        ].map(([key, label, Icon]) => (
-          <button key={key as string} className={tab === key ? "active" : ""} onClick={() => setTab(key as Tab)}>
-            <Icon size={17} /> {label as string}
+        ] as const).map(([key, label, Icon]) => (
+          <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>
+            <Icon size={17} /> {label}
           </button>
         ))}
       </nav>
