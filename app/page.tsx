@@ -300,6 +300,49 @@ export default function Home() {
     }
   }
 
+  async function exportReportDocx() {
+    if (!result) return;
+    setBusy(true);
+    try {
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+      const paragraphs = [
+        new Paragraph({ text: projectName, heading: HeadingLevel.TITLE }),
+        new Paragraph({ text: "Részletes tanári mintázatelemzési jelentés", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: `Szavak: ${result.words} | Mondatok: ${result.sentences} | Bekezdések: ${result.paragraphs.length}` }),
+        new Paragraph({ text: `Mintázati jelzés: ${result.score}/100 – ${result.label}` }),
+        new Paragraph({ text: "Fontos: a pontszám nem az AI-val írt szöveg aránya, nem bizonyít AI-szerzőséget vagy plágiumot." }),
+        new Paragraph({ text: "Nyelvi mintázatok", heading: HeadingLevel.HEADING_2 }),
+        ...result.signals.map(signal => new Paragraph({ children: [
+          new TextRun({ text: `${signal.label} (${signal.value}/100): `, bold: true }),
+          new TextRun(signal.detail)
+        ] })),
+        new Paragraph({ text: "Bekezdésenkénti értékelés", heading: HeadingLevel.HEADING_2 }),
+        ...result.paragraphs.flatMap((p, i) => [
+          new Paragraph({ text: `${i + 1}. bekezdés – ${p.score}/100`, heading: HeadingLevel.HEADING_3 }),
+          new Paragraph({ text: p.text }),
+          ...p.reasons.map(reason => new Paragraph({ text: `Indoklás: ${reason}`, bullet: { indent: 360 } })),
+          new Paragraph({ text: "Tanári ellenőrzés: konkrét példák, források és a gondolatmenet saját szavas magyarázata." })
+        ]),
+        new Paragraph({ text: "Értelmezési korlátok", heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: "A vizsgált stílusjegyek emberi szövegekben is előfordulnak. Az elemzés nem validált AI-detektor; önmagában nem használható szankció alapjául." })
+      ];
+      const doc = new Document({ sections: [{ children: paragraphs }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (projectName || "jelentes").replace(/[^\\p{L}\\p{N}_-]+/gu, "_") + "_tanari_jelentes.docx";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setToast("Tanári jelentés Word-fájl elkészült");
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Nem sikerült elkészíteni a jelentést.");
+      setToast("Nem sikerült exportálni a jelentést");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copySelected() {
     if (!selectedParagraph) return;
     await navigator.clipboard.writeText(selectedParagraph.text);
@@ -467,7 +510,7 @@ export default function Home() {
               <h2>Mintázati jelzés: {result.score}/100</h2>
               <p>{result.label}. Az érték nem a mesterséges intelligencia által írt szöveg százalékos aránya.</p>
               <p style={{color:"#94a3b8"}}>Az elemzés szöveghossz-alapú bizonyossági besorolása: {result.confidence}. Ez nem validált detektálási pontosság.</p>
-              <button className="primary" onClick={()=>window.print()}><Download size={16}/> Jelentés nyomtatása / PDF-be mentése</button>
+              <div style={{display:"flex",flexWrap:"wrap",gap:10}}><button className="primary" onClick={()=>window.print()}><Download size={16}/> PDF-be mentés / nyomtatás</button><button className="secondary" disabled={busy} onClick={exportReportDocx}><FileText size={16}/> Teljes tanári jelentés Wordben</button></div>
             </div>
             <VisualReport sections={[{id:"document",title:"Teljes dokumentum",paragraphScores:result.paragraphs.map(p=>p.score)}]} onSelect={(_,i)=>{setSelected(i);setTab("elemzes");}} />
             <div className="panel" style={{padding:20}}>
