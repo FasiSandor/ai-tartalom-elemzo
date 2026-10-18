@@ -102,13 +102,23 @@ export default function Home() {
   }
 
   async function runAnalysis() {
-    if (!text.trim()) return;
+    if (!text.trim() || busy) return;
+    setFileError("");
+    if (text.length > 1_500_000) {
+      setFileError("A dokumentum túl hosszú az egyidejű elemzéshez. Oszd több részre (legfeljebb 1,5 millió karakter).");
+      return;
+    }
     setBusy(true);
-    await new Promise((r) => setTimeout(r, 260));
-    const r = analyzeText(text, styleProfile);
-    setResult(r);
-    setSelected(r.paragraphs.length ? 0 : null);
-    setBusy(false);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const analysis = analyzeText(text, styleProfile);
+      setResult(analysis);
+      setSelected(analysis.paragraphs.length ? 0 : null);
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Az elemzés nem sikerült.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function readFile(file?: File) {
@@ -133,7 +143,9 @@ export default function Home() {
           if (pageNum % 12 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
         }
         if (!pages.length || pages.join("").trim().length < 50) throw new Error("A PDF valószínűleg képalapú. Szövegfelismerés (OCR) szükséges.");
-        setText(pages.join("\n\n"));
+        const extractedText = pages.join("\n\n");
+        if (extractedText.length > 1_500_000) throw new Error("A PDF szövege túl hosszú. Oszd kisebb dokumentumokra.");
+        setText(extractedText);
       } else if (file.name.toLowerCase().endsWith(".docx")) {
         const mammoth = await import("mammoth");
         const buffer = await file.arrayBuffer();
