@@ -115,18 +115,33 @@ export default function Home() {
     setBusy(true);
     setFileError("");
     try {
+      if (file.size > 45 * 1024 * 1024) throw new Error("A fájl nagyobb 45 MB-nál. Kérlek, kisebb fájlt válassz.");
       if (file.name.toLowerCase().endsWith(".pdf")) {
-        throw new Error("A PDF-beolvasás még fejlesztés alatt áll. Most DOCX vagy TXT fájlt tölts fel.");
-      }
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+        const pages: string[] = [];
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const extracted = content.items.map((item) => ("str" in item ? String(item.str) : "")).join(" ");
+          if (extracted.trim()) pages.push(extracted);
+          if (pageNum % 12 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
+        }
+        if (!pages.length || pages.join("").trim().length < 50) throw new Error("A PDF valószínűleg képalapú. Szövegfelismerés (OCR) szükséges.");
+        setText(pages.join("\\n\\n").replace(/\\n/g, "\n"));
+      } else
       if (file.name.toLowerCase().endsWith(".docx")) {
         const mammoth = await import("mammoth");
         const buffer = await file.arrayBuffer();
         const out = await mammoth.extractRawText({ arrayBuffer: buffer });
         setText(out.value);
-      } else {
+      } else if (file.name.toLowerCase().endsWith(".txt")) {
         setText(await file.text());
+      } else {
+        throw new Error("Csak PDF, DOCX és TXT fájl tölthető fel.");
       }
-      setProjectName(file.name.replace(/\.(docx|txt)$/i, "") || nowName());
+      setProjectName(file.name.replace(/\.(docx|txt|pdf)$/i, "") || nowName());
       setCurrentProjectId(null);
       setResult(null);
       setSelected(null);
@@ -368,13 +383,13 @@ export default function Home() {
           <section className="workspace">
             <div className="panel input-panel">
               <div className="panel-head">
-                <div><span className="step">1</span><div><b>Szöveg</b><small>Másold be a szöveget, vagy válassz DOCX/TXT fájlt.</small></div></div>
+                <div><span className="step">1</span><div><b>Szöveg</b><small>Másold be a szöveget, vagy válassz PDF, DOCX vagy TXT fájlt.</small></div></div>
                 <button className="ghost" onClick={loadSample}>Mintaszöveg</button>
               </div>
               <textarea value={text} onChange={(e) => {setText(e.target.value); setResult(null);}} placeholder="Ide másold a vizsgálandó szöveget…" />
               <div className="input-actions">
                 <button className="secondary" onClick={() => inputRef.current?.click()}><Upload size={17} /> Fájl</button>
-                <input ref={inputRef} type="file" accept=".txt,.docx" hidden onChange={(e) => readFile(e.target.files?.[0])} />
+                <input ref={inputRef} type="file" accept=".txt,.docx,.pdf" hidden onChange={(e) => readFile(e.target.files?.[0])} />
                 <span>{styleProfile ? "Saját stílusprofil: aktív" : "Alap elemzési profil"}</span>
                 <button className="primary" disabled={!text.trim() || busy} onClick={runAnalysis}>
                   {busy ? <RefreshCw className="spin" size={17} /> : <Activity size={17} />}
