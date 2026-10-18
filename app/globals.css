@@ -3,3 +3,32 @@
 @media print{html,body,.app-shell{background:#fff!important;color:#111!important}.topbar,.tabs,.document-bar,.toast,button,footer{display:none!important}.settings-wrap{display:block;max-width:none;padding:0}.settings-wrap>.panel{background:#fff!important;color:#111!important;border:0!important;box-shadow:none!important;break-inside:avoid}.settings-wrap p,.settings-wrap h1,.settings-wrap h2,.settings-wrap b,.settings-wrap li,.settings-wrap strong{color:#111!important}.settings-wrap article{break-inside:avoid}.settings-wrap section{box-shadow:none!important}*{animation:none!important;transition:none!important}}
 @media(max-width:620px){.hero h1{font-size:clamp(30px,9vw,42px)}.input-panel textarea{min-height:230px}.primary,.secondary{min-height:42px}.settings-wrap h1{overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Mobile overflow containment: retain existing dark-tech design */
+html,body{width:100%;max-width:100%;overflow-x:clip}
+.app-shell{width:100%;max-width:100%;min-width:0;overflow-x:clip}
+.app-shell main,.app-shell section,.app-shell article,.app-shell .panel,.app-shell .workspace,.app-shell .settings-wrap{min-width:0;max-width:100%}
+.settings-wrap>.panel{min-width:0;overflow-wrap:anywhere}
+.settings-wrap h1,.settings-wrap h2,.settings-wrap h3,.settings-wrap p,.settings-wrap li,.settings-wrap strong{overflow-wrap:anywhere;word-break:normal}
+.settings-wrap button{max-width:100%;white-space:normal;text-align:left;justify-content:center}
+.document-bar input,.workspace>*{min-width:0}
+.tabs{max-width:100vw;overscroll-behavior-x:contain}
+@media(max-width:620px){
+ .topbar{gap:8px;min-width:0}
+ .brand{min-width:0;flex:1}
+ .brand>div:last-child{min-width:0}
+ .brand strong{font-size:14px;line-height:1.25}
+ .brand span{font-size:10px;line-height:1.3}
+ .top-actions{flex-shrink:0}
+ .top-btn{font-size:12px}
+ .settings-wrap{width:100%;margin:12px auto;padding:0 12px}
+ .settings-wrap>.panel{padding:14px!important;border-radius:14px}
+ .settings-wrap h1{font-size:clamp(21px,6vw,30px)!important;line-height:1.15}
+ .settings-wrap h2{font-size:clamp(18px,5vw,24px);line-height:1.25}
+ .settings-wrap p,.settings-wrap li{font-size:13px;line-height:1.6}
+ .settings-wrap .primary,.settings-wrap .secondary{font-size:13px;line-height:1.35;min-width:0}
+ .settings-wrap .panel>div[style*="display: flex"]{flex-wrap:wrap}
+ .settings-wrap .panel>div[style*="display: flex"]>button{flex:1 1 150px}
+ .tabs{scrollbar-width:none}
+ .tabs::-webkit-scrollbar{display:none}
+}
