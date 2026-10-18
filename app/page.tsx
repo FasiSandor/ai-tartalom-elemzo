@@ -121,6 +121,7 @@ export default function Home() {
         pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
         const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
         const pages: string[] = [];
+        if (pdf.numPages > 500) throw new Error("A PDF több mint 500 oldalas; oszd több részre az elemzéshez.");
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
           const content = await page.getTextContent();
