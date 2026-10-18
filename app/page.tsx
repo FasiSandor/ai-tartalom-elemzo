@@ -60,6 +60,7 @@ export default function Home() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [tab, setTab] = useState<Tab>("elemzes");
+  const [moreOpen, setMoreOpen] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [projects, setProjects] = useState<SavedProject[]>([]);
@@ -379,21 +380,28 @@ export default function Home() {
         </div>
       </header>
 
-      <nav className="tabs">
+      <nav className="tabs" aria-label="Fő navigáció">
         {([
-          ["projektek", "Projektek", FolderOpen],
-          ["elemzes", "Elemzés", Gauge],
-          ["javito", "Javítóasztal", Wand2],
-          ["jelentes", "Jelentés", Activity],
-          ["szerkezet", "Szerkezet", Layers3],
-          ["export", "Export", FileText],
-          ["beallitasok", "Beállítások", Settings]
-        ] as const).map(([key, label, Icon]) => (
-          <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>
-            <Icon size={17} /> {label}
+          ["elemzes", "1. Feltöltés és elemzés", Gauge],
+          ["jelentes", "2. Jelentés", Activity],
+          ["javito", "3. Javítóasztal", Wand2],
+          ["projektek", "Dokumentumtár", FolderOpen]
+        ] as const).map(([key,label,Icon])=>(
+          <button key={key} className={tab===key?"active":""} onClick={()=>{setTab(key);setMoreOpen(false);}}>
+            <Icon size={17}/><span>{label}</span>
           </button>
         ))}
+        <button className={moreOpen||tab==="szerkezet"||tab==="export"||tab==="beallitasok"?"active":""}
+          aria-expanded={moreOpen} aria-controls="more-tools" onClick={()=>setMoreOpen(v=>!v)}>
+          <Settings size={17}/><span>További eszközök</span>
+        </button>
       </nav>
+      {moreOpen && <div id="more-tools" className="more-tools" role="group" aria-label="További eszközök">
+        {([["szerkezet","Szerkezet",Layers3],["export","Word-export",FileText],["beallitasok","Beállítások",Settings]] as const).map(([key,label,Icon])=>
+          <button key={key} className={tab===key?"active":""} onClick={()=>{setTab(key);setMoreOpen(false);}}>
+            <Icon size={16}/>{label}
+          </button>)}
+      </div>}
 
       {tab !== "projektek" && (
         <section className="document-bar">
