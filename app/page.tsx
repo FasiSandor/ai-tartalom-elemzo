@@ -332,7 +332,7 @@ export default function Home() {
         ...result.paragraphs.flatMap((p, i) => [
           new Paragraph({ text: `${i + 1}. bekezdés – ${p.score}/100`, heading: HeadingLevel.HEADING_3 }),
           new Paragraph({ text: p.text }),
-          ...p.reasons.map(reason => new Paragraph({ text: `Indoklás: ${reason}`, bullet: { indent: 360 } })),
+          ...p.reasons.map(reason => new Paragraph({ text: `• Indoklás: ${reason}` })),
           new Paragraph({ text: "Tanári ellenőrzés: konkrét példák, források és a gondolatmenet saját szavas magyarázata." })
         ]),
         new Paragraph({ text: "Értelmezési korlátok", heading: HeadingLevel.HEADING_2 }),
