@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import VisualReport from "@/components/VisualReport";
 import {
   analyzeText,
   buildSuggestions,
@@ -14,7 +15,7 @@ import {
   Sparkles, Trash2, Upload, Wand2
 } from "lucide-react";
 
-type Tab = "projektek" | "elemzes" | "javito" | "szerkezet" | "export" | "beallitasok";
+type Tab = "projektek" | "elemzes" | "javito" | "szerkezet" | "export" | "beallitasok" | "jelentes";
 
 type SavedProject = {
   id: string;
@@ -301,6 +302,7 @@ export default function Home() {
           ["projektek", "Projektek", FolderOpen],
           ["elemzes", "Elemzés", Gauge],
           ["javito", "Javítóasztal", Wand2],
+          ["jelentes", "Jelentés", Activity],
           ["szerkezet", "Szerkezet", Layers3],
           ["export", "Export", FileText],
           ["beallitasok", "Beállítások", Settings]
@@ -423,6 +425,36 @@ export default function Home() {
             </section>
           )}
         </>
+      )}
+
+      {tab === "jelentes" && (
+        <section className="settings-wrap">
+          {!result ? <div className="panel empty"><FileText size={38}/><b>Előbb elemezz egy dokumentumot</b><span>Feltöltés és elemzés után megjelennek a vizuális és szöveges eredmények.</span><button className="primary" onClick={()=>setTab("elemzes")}>Elemzés megnyitása</button></div> : <>
+            <div className="panel" style={{padding:20}}>
+              <span className="eyebrow">RÉSZLETES TANÁRI JELENTÉS</span>
+              <h1 style={{margin:"6px 0 12px"}}>{projectName}</h1>
+              <p style={{color:"#94a3b8"}}>{result.words} szó · {result.paragraphs.length} vizsgált bekezdés · {result.sentences} mondat</p>
+              <h2>Mintázati jelzés: {result.score}/100</h2>
+              <p>{result.label}. Az érték nem a mesterséges intelligencia által írt szöveg százalékos aránya.</p>
+              <p style={{color:"#94a3b8"}}>Az elemzés szöveghossz-alapú bizonyossági besorolása: {result.confidence}. Ez nem validált detektálási pontosság.</p>
+              <button className="primary" onClick={()=>window.print()}><Download size={16}/> Jelentés nyomtatása / PDF-be mentése</button>
+            </div>
+            <VisualReport sections={[{id:"document",title:"Teljes dokumentum",paragraphScores:result.paragraphs.map(p=>p.score)}]} onSelect={(_,i)=>{setSelected(i);setTab("elemzes");}} />
+            <div className="panel" style={{padding:20}}>
+              <h2>Azonosított nyelvi mintázatok</h2>
+              {result.signals.map(s=><div key={s.label} className="reason"><strong>{s.label}: {s.value}/100</strong> — {s.detail}</div>)}
+              <h2>Megjelölt bekezdések és indoklásuk</h2>
+              {result.paragraphs.map((p,i)=><article key={i} style={{borderTop:"1px solid #2a3445",padding:"14px 0"}}>
+                <b>{i+1}. bekezdés · {p.score}/100</b>
+                <p style={{whiteSpace:"pre-wrap",lineHeight:1.6}}>{p.text}</p>
+                <ul>{p.reasons.map((r,j)=><li key={j}>{r}</li>)}</ul>
+                <p style={{color:"#94a3b8",fontSize:12}}>Tanári ellenőrzés: kérj konkrét példát, a hivatkozott forrás bemutatását és a gondolatmenet saját szavakkal történő magyarázatát.</p>
+              </article>)}
+              <h2>Értelmezési korlátok</h2>
+              <p>Az egyenletes mondathossz, a sablonos kifejezések és a stílusváltások ember által írt szövegben is előfordulnak. A jelentés nem bizonyít AI-szerzőséget, plágiumot vagy szabályszegést. Önálló szankció alapjául nem használható.</p>
+            </div>
+          </>}
+        </section>
       )}
 
       {tab === "javito" && (
