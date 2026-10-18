@@ -1,0 +1,11 @@
+{
+  "name": "AI Beadandóelemző",
+  "short_name": "AI Elemző",
+  "description": "Dokumentumok részletes szövegmintázat-elemzése",
+  "lang": "hu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F14",
+  "theme_color": "#0B0F14",
+  "icons": []
+}
