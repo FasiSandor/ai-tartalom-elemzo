@@ -13,5 +13,6 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-audit --no-fund
+      - run: node scripts/smoke-test.mjs
       - run: npx tsc --noEmit
       - run: npm run build
