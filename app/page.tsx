@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import WriterWorkspace from "@/app/components/WriterWorkspace";
+import DeepAnalysis from "@/app/components/DeepAnalysis";
 import {
   analyzeText,
   buildSuggestions,
@@ -15,7 +16,7 @@ import {
   Sparkles, Trash2, Upload, Wand2
 } from "lucide-react";
 
-type Tab = "projektek" | "elemzes" | "aiiro" | "javito" | "szerkezet" | "export" | "beallitasok";
+type Tab = "projektek" | "elemzes" | "melyelemzes" | "aiiro" | "javito" | "szerkezet" | "export" | "beallitasok";
 
 type SavedProject = {
   id: string;
@@ -300,7 +301,8 @@ export default function Home() {
       <nav className="tabs">
         {[
           ["projektek", "Projektek", FolderOpen],
-          ["elemzes", "Elemzés", Gauge],
+          ["elemzes", "Gyors elemzés", Gauge],
+          ["melyelemzes", "Mélyelemzés", Activity],
           ["aiiro", "AI Író", Sparkles],
           ["javito", "Javítóasztal", Wand2],
           ["szerkezet", "Szerkezet", Layers3],
@@ -425,6 +427,10 @@ export default function Home() {
             </section>
           )}
         </>
+      )}
+
+      {tab === "melyelemzes" && (
+        <DeepAnalysis text={text} title={projectName} onToast={setToast} />
       )}
 
       {tab === "aiiro" && (
