@@ -39,10 +39,10 @@ export async function POST(request: Request) {
       const prompt = [
         "Magyar szakdolgozat szövegét elemzed szerkesztői és stilisztikai szempontból.",
         "Nem szerzőséget bizonyítasz és nem AI-detektort játszol ki.",
-        "Vizsgáld: nyelvhelyesség, mondatszerkezet, ismétlés, túl általános/generikus megfogalmazás, logikai ugrás, következetlen terminológia, túl steril/egyenletes stílus, szakmai hang, hivatkozásgyanús állítás, amelyhez forrás kellhet.",
+        "Vizsgáld: nyelvhelyesség, mondatszerkezet, ismétlés, túl általános/generikus megfogalmazás, logikai ugrás, következetlen terminológia, túl steril/egyenletes stílus, szakmai hang, hivatkozásgyanús állítás, amelyhez forrás kellhet, továbbá minden befejezetlen, értelmetlen, nyelvtanilag széteső, félbemaradt vagy kontextus nélkül maradó mondatot és mondatrészt.",
         "Csak a ténylegesen problémás vagy érdemi részeket jelöld.",
         "Adj vissza KIZÁRÓLAG érvényes JSON-t ebben a formában:",
-        '{"summary":"...","items":[{"quote":"rövid idézet max 18 szó","category":"nyelv|stílus|ismétlés|logika|terminológia|forrás","severity":"alacsony|közepes|magas","reason":"...","suggestion":"..."}]}',
+        '{"summary":"...","items":[{"quote":"rövid idézet max 18 szó","category":"nyelv|mondattöredék|stílus|ismétlés|logika|terminológia|forrás","severity":"alacsony|közepes|magas","reason":"...","suggestion":"..."}]}',
         `Dokumentum: ${title || "névtelen"}`,
         `Rész: ${i+1}/${chunks.length}`,
         "",
